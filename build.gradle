@@ -23,11 +23,6 @@ dependencies {
 
     // Spring Boot dependencies will automatically be handled by the dependency manager plugin.
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.security:spring-security-web'
-    implementation 'org.springframework.security:spring-security-config'
-    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.springframework:spring-jdbc'
 
     // Jedis for Redis client
     implementation 'redis.clients:jedis'
@@ -35,6 +30,7 @@ dependencies {
 
     // Caffeine for in-memory caching
     implementation group: 'com.github.ben-manes.caffeine', name: 'caffeine', version: '3.1.8'
+
     // Bucket4J for rate limiting
     implementation group: 'com.bucket4j', name: 'bucket4j-core', version: '8.10.1'
     implementation("com.bucket4j:bucket4j-redis:8.10.1")
