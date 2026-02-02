@@ -77,7 +77,7 @@ publishing {
             artifact sourcesJar
             artifact javadocJar
             groupId = 'net.pyroneon'
-            artifactId = 'NotEnoughBuckets'
+            artifactId = 'not-enough-buckets'
             version = libraryVersion
             pom {
                 name = 'NotEnoughBuckets'
