@@ -6,7 +6,7 @@ plugins {
 }
 
 ext {
-    libraryVersion = '1.0.0'
+    libraryVersion = '1.0.1'
 }
 
 group = 'net.pyroneon'

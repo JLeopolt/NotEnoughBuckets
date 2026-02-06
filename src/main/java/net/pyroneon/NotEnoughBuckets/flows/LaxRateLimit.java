@@ -6,7 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Specifies a lax rate limit, for commonly used webhooks. Applies to all request properties.
+ * Specifies a lax rate limit, for commonly used endpoints. Applies to all request properties.
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)

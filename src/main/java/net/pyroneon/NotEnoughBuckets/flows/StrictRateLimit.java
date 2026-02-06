@@ -6,7 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Specifies a strict rate limit, for more expensive webhooks. Applies to all request properties.
+ * Specifies a strict rate limit, for more expensive endpoints. Applies to all request properties.
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)

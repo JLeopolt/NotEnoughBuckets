@@ -3,7 +3,7 @@ package net.pyroneon.NotEnoughBuckets.flows;
 import java.lang.annotation.*;
 
 /**
- * An annotation to apply a rate limit to a webhook method. A data structure that represents the amount of traffic
+ * An annotation to apply a rate limit to a controller method. A data structure that represents the amount of traffic
  * some user (tracked by IP or otherwise) is permitted to issue to a specific endpoint within some time frame.
  * See <code>RateLimitHandler</code> for the actual code implementation.
  * <p>
