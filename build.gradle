@@ -1,12 +1,11 @@
 plugins {
-    id 'java'
+    id 'java-library'
     id 'maven-publish'
-    id 'org.springframework.boot' version '3.4.1'
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
 ext {
-    libraryVersion = '1.0.1'
+    libraryVersion = '1.0.11'
 }
 
 group = 'net.pyroneon'
@@ -16,9 +15,13 @@ repositories {
     mavenCentral()
 }
 
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.boot:spring-boot-dependencies:3.4.1"
+    }
+}
+
 dependencies {
-    testImplementation platform('org.junit:junit-bom:5.10.0')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
     implementation 'org.realityforge.org.jetbrains.annotations:org.jetbrains.annotations:1.7.0'
 
     // Spring Boot dependencies will automatically be handled by the dependency manager plugin.
@@ -34,6 +37,22 @@ dependencies {
     // Bucket4J for rate limiting
     implementation group: 'com.bucket4j', name: 'bucket4j-core', version: '8.10.1'
     implementation("com.bucket4j:bucket4j-redis:8.10.1")
+
+    // Testing dependencies
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'org.mockito:mockito-core:5.12.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.12.0'
+    // Use testcontainers 2+ for compatibility with latest Docker Desktop
+    testImplementation("org.testcontainers:testcontainers:2.0.3")
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'com.redis:testcontainers-redis'
+}
+
+tasks.named('build') {
+    dependsOn 'javadocJar'
+    dependsOn 'sourcesJar'
 }
 
 // Task to create a Javadoc JAR
@@ -50,16 +69,9 @@ tasks.register('sourcesJar', Jar) {
     from sourceSets.main.allSource
 }
 
-// Since this is a library, don't create an executable JAR.
-tasks.named('bootJar') {
-    enabled = false
-}
-
 publishing {
     repositories {
         maven {
-            name = 'NotEnoughBuckets'
-            description = 'A simple rate limit library for Spring Boot applications.'
             url = 'https://maven.pkg.github.com/JLeopolt/NotEnoughBuckets'
             // Notice that GitHub tokens are set to expire after 90 days.
             // Generate a new token at https://github.com/settings/tokens/new and place it into gradle.properties.
