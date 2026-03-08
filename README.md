@@ -14,6 +14,11 @@ This library depends on `Bucket4J` for rate limiting.
 For standalone in-memory configurations, `Caffeine` is used.
 For Redis configurations, a `Jedis` client must be provided.
 
+## Testing
+Run tests with `./gradlew test`. Integration tests use `Testcontainers`, `JUnit`, and `mockMVC` to simulate the
+entire application context and live dependencies for better coverage. Abstract tests are expected to pass regardless
+of the underlying `BucketContainer` implementation (standalone or Redis mode). Mode-specific configurations can be
+included in their corresponding test implementation class.
 
 # Installation
 
