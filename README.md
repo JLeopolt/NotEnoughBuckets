@@ -106,6 +106,9 @@ public MyController {
     }
 }
 ```
+**Please note that methods with the same flow will not share a bucket.**
+When two methods have the same flow, they follow the same rules while having their own buckets which are uniquely associated with their method.
+This applies to class and method-level rate limits.
 See `RateLimitHandler` for details on rate limit priority when overlapping class and method-level rate limits.
 
 ### Handling Exceptions
