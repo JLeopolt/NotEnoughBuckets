@@ -24,8 +24,8 @@ public class RedisConfig {
 
     /** The bucket container (repository) to use for rate limits. */
     @Bean
-    public BucketContainer preferredBucketContainer(ProxyManager<byte[]> proxyManager) {
-        return new RedisBucketContainer(proxyManager);
+    public BucketContainer preferredBucketContainer(JedisPool jedisPool, ProxyManager<byte[]> proxyManager) {
+        return new RedisBucketContainer(jedisPool, proxyManager);
     }
 
     /** This proxy manager will allow direct interactions with Bucket4J buckets stored in Redis. */

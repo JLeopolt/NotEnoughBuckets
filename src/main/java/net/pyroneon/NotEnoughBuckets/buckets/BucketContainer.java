@@ -30,4 +30,8 @@ public interface BucketContainer {
     @NotNull
     Bucket resolve(String key, Supplier<BucketConfiguration> configurationSupplier);
 
+    /**
+     * Deletes all buckets from the container.
+     */
+    void clear();
 }

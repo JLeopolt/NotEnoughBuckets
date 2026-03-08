@@ -29,6 +29,14 @@ public class CaffeineBucketContainer implements BucketContainer {
     }
 
     /**
+     * Deletes all existing buckets.
+     */
+    @Override
+    public void clear() {
+        cache.invalidateAll();
+    }
+
+    /**
      * Retrieves an existing bucket or creates a new bucket with the given configuration.
      * Returns an in-memory, mutable Bucket.
      * @param key                   The key to resolve/store this bucket from/to. Should be unique to the request type and issuer.

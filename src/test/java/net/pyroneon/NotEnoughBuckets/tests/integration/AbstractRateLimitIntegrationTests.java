@@ -1,5 +1,7 @@
 package net.pyroneon.NotEnoughBuckets.tests.integration;
 
+import net.pyroneon.NotEnoughBuckets.buckets.BucketContainer;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -14,6 +16,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public abstract class AbstractRateLimitIntegrationTests {
 
     @Autowired protected MockMvc mockMvc;
+    @Autowired protected BucketContainer bucketContainer;
+
+    @BeforeEach
+    void beforeEach() {
+        // Clear bucket container in between tests, to maintain isolation.
+        bucketContainer.clear();
+    }
 
     /**
      * Tests if a controller-method rate limit is applied correctly by invoking an endpoint
