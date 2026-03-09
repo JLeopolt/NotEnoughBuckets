@@ -241,6 +241,9 @@ The `ProxyManager` yields buckets that are linked to an actual entry in Redis, s
 ### RequestResolver
 Given an incoming request, this class will try to get some attribute about it and "resolve" (return) it.
 Each `RequestResolver` has its own unique property name. Do not assign the same property name to multiple resolvers.
+If a resolver returns true for `isRequired()`, then it will be mandatory in all applicable rate limits.
+This means that all rate limits with the default `appliesTo='*'` wildcard will fail unless the required property is provided in requests.
+The exception returned will be a `RateLimitPropertyResolutionFailure`.
 
 ### IpAddressResolver
 This is an implementation of `RequestResolver` that tries to get the IP address of an incoming request.

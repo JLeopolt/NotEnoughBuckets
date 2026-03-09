@@ -6,6 +6,7 @@ import io.github.bucket4j.distributed.proxy.ProxyManager;
 import org.jetbrains.annotations.NotNull;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.Pipeline;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
@@ -32,11 +33,17 @@ public class RedisBucketContainer implements BucketContainer {
      */
     @Override
     public void clear() {
-        // Delete all keys with the NEB prefix.
-        Jedis jedis = jedisPool.getResource();
-        Set<String> keys = jedis.keys(KEY_PREFIX + "*");
-        if(!keys.isEmpty()){
-            jedis.del(keys.toArray(new String[0]));
+        // Delete all buckets with the NEB prefix.
+        try(Jedis jedis = jedisPool.getResource()){
+            Set<String> keys = jedis.keys(KEY_PREFIX + "*");
+            if(!keys.isEmpty()){
+                // Use a pipeline for efficiency
+                Pipeline pipeline = jedis.pipelined();
+                for(String key : keys){
+                    pipeline.del(key);
+                }
+                pipeline.sync();
+            }
         }
     }
 

@@ -6,16 +6,14 @@ import io.github.bucket4j.BucketConfiguration;
 import jakarta.servlet.http.HttpServletRequest;
 import net.pyroneon.NotEnoughBuckets.buckets.BucketContainer;
 import net.pyroneon.NotEnoughBuckets.exceptions.RateLimitExceededException;
+import net.pyroneon.NotEnoughBuckets.exceptions.RateLimitPropertyResolutionFailure;
 import net.pyroneon.NotEnoughBuckets.flows.RateLimit;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Offers methods to directly set and interact with rate limits. Useful for manually creating rate limits when
@@ -52,6 +50,7 @@ public class RateLimitService {
      *                         with the same HTTP method should use the same identifier (consistency).
      * @param rateLimits Any rate limits to apply. Should be consistent per method. May be empty.
      * @throws RateLimitExceededException If one or more rate limits were exceeded by this request.
+     * @throws RateLimitPropertyResolutionFailure If a property was required but was missing from the request.
      */
     public void apply(@NotNull HttpServletRequest request, @NotNull String methodIdentifier, List<RateLimit> rateLimits) {
         // If no rate limits, do nothing.
@@ -63,31 +62,40 @@ public class RateLimitService {
 
         logger.trace("Rate limited method: '{}' was invoked with {} effective rate limits.", methodIdentifier, rateLimits.size());
 
-        // Resolve all required properties from the request. (Shared by all effective rate limits)
-        Map<String, String> resolvedProperties = requestResolverManager.mapResolvedProperties(request);
-
-        // Iterate thru each effective rate limit.
+        // A flag to indicate that one or more rate limits were exceeded
         boolean isRateLimitExceeded = false;
+        // A list of property names that were applicable & required, but were missing (if any).
+        List<String> missingRequiredPropertyNames = new ArrayList<>();
+        // Iterate thru each effective rate limit.
         for(RateLimit rateLimit : rateLimits) {
             logger.trace("Applying rate limit '{}'.", rateLimit.name());
 
-            // Get the properties this rate limit applies to.
-            HashSet<String> appliesTo = new HashSet<>(List.of(rateLimit.appliesTo()));
-            // If the rate limit contains the wildcard, apply for all properties.
-            boolean isWildcard = appliesTo.contains("*");
+            // Process the raw appliesTo into a sanitized set, handling wildcards.
+            Set<String> applicableProperties = requestResolverManager.sanitizeApplicableProperties(rateLimit.appliesTo());
 
-            // Individually handle each required property.
-            for(Map.Entry<String, String> property : resolvedProperties.entrySet()) {
+            // Resolve only the properties applicable to this rate limit.
+            Map<String, String> resolvedProperties = requestResolverManager.mapResolvedProperties(request, applicableProperties);
 
-                // First, check if this rate limit had a wildcard.
-                // If not, check if it applies to this property.
-                if(!isWildcard && !appliesTo.contains(property.getKey())) {
-                    // If the property doesn't apply to this rate limit, skip.
+            // Individually handle each property specified by the rate limit's appliesTo.
+            for(String applicableProperty : applicableProperties) {
+                String resolvedValue = resolvedProperties.get(applicableProperty);
+
+                // If the property couldn't be resolved
+                if(resolvedValue == null) {
+                    // If the property was required, add it to a fail list; but continue looping
+                    if(requestResolverManager.getResolvers().get(applicableProperty).isRequired()) {
+                        missingRequiredPropertyNames.add(applicableProperty);
+                        logger.trace("Failed to resolve required property '{}' from request.", applicableProperty);
+                    }
+                    else {
+                        // If the property was optional, do nothing.
+                        logger.trace("Optional property '{}' of request couldn't be resolved. Skipping.", applicableProperty);
+                    }
                     continue;
                 }
 
                 // Create a composite key for this endpoint, with the given property
-                String compositeKey = createCompositeKey(methodIdentifier, property.getKey(), property.getValue());
+                String compositeKey = createCompositeKey(methodIdentifier, applicableProperty, resolvedValue);
 
                 // Retrieve the bucket associated with this key (if one exists)
                 // If no bucket exists yet, creates a fresh one.
@@ -97,20 +105,23 @@ public class RateLimitService {
 
                 // Try consuming a token from the bucket. Recall that buckets are assumed to be mutable.
                 if(bucket.tryConsume(1)) {
-                    logger.trace("Request property '{}' didn't exceed rate limit.", property.getKey());
+                    logger.trace("Request property '{}' didn't exceed rate limit.", applicableProperty);
                 } else {
                     // Otherwise, mark the rate limit as exceeded; but continue looping.
                     isRateLimitExceeded = true;
-                    logger.trace("Request property '{}' exceeded rate limit.", property.getKey());
+                    logger.trace("Request property '{}' exceeded rate limit.", applicableProperty);
                 }
             }
         }
 
-        // Once all properties across all rate limits have been processed,
-        // check if any rate limit was ever exceeded.
+        // Once all properties across all rate limits have been processed, check if any rate limit was ever exceeded.
         if(isRateLimitExceeded) throw new RateLimitExceededException();
+        // Also check if any requests were missing applicable & required properties
+        if(!missingRequiredPropertyNames.isEmpty()) {
+            throw new RateLimitPropertyResolutionFailure(missingRequiredPropertyNames);
+        }
 
-        // If no rate limit was ever exceeded, success.
+        // If no rate limit was ever exceeded, or applicable & required property was missing, success.
     }
 
     /**
