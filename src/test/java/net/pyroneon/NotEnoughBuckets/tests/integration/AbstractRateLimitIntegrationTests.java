@@ -1,11 +1,22 @@
 package net.pyroneon.NotEnoughBuckets.tests.integration;
 
 import net.pyroneon.NotEnoughBuckets.buckets.BucketContainer;
+import net.pyroneon.NotEnoughBuckets.tests.controllers.ConcurrentController;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -376,5 +387,57 @@ public abstract class AbstractRateLimitIntegrationTests {
 
         // Ensure the request fails and a 500 is returned to indicate misconfiguration.
         mockMvc.perform(get(endpoint)).andExpect(status().isInternalServerError());
+    }
+
+    /**
+     * Issues multiple concurrent requests and ensures the rate limit is not exceeded.
+     */
+    @Test
+    void test_concurrent_rate_limit_exceeded() throws Exception {
+        String endpoint = "/test_concurrent_10_1_30_false";
+
+        int threads = 20;
+        ExecutorService executor = Executors.newFixedThreadPool(threads);
+        CountDownLatch ready = new CountDownLatch(threads);
+        CountDownLatch start = new CountDownLatch(1);
+        CountDownLatch done = new CountDownLatch(threads);
+
+        List<Integer> statuses = Collections.synchronizedList(new ArrayList<>());
+
+        for (int i = 0; i < threads; i++) {
+            executor.submit(() -> {
+                try {
+                    ready.countDown();
+                    start.await(); // ensure simultaneous start
+
+                    int status = mockMvc.perform(get(endpoint))
+                            .andReturn()
+                            .getResponse()
+                            .getStatus();
+
+                    statuses.add(status);
+
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                } finally {
+                    done.countDown();
+                }
+            });
+        }
+
+        ready.await();   // wait until all threads are ready
+        start.countDown(); // release them simultaneously
+        done.await();    // wait for completion
+
+        long success = statuses.stream().filter(s -> s == 200).count();
+        long limited = statuses.stream().filter(s -> s == 429).count();
+
+        assertEquals(10, success);
+        assertEquals(10, limited);
+
+        // Ensure that more than 1 request was being processed concurrently
+        assertTrue(ConcurrentController.maxActive.get() > 1);
+
+        executor.shutdown();
     }
 }
